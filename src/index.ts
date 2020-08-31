@@ -4,12 +4,11 @@ import http from "http";
 import socketIo from "socket.io";
 import { OAuth2Client } from "google-auth-library";
 import cors from "cors";
+import * as dotenv from "dotenv";
 
-const API_KEY = "AIzaSyCRCsK0UNpcxT2gmp8PHOemV7staZeOx5E";
-const CLIENT_ID =
-  "245046245085-aqtiof6fnq42g2u1uooag9q9j028h9i4.apps.googleusercontent.com";
+dotenv.config();
 
-const client = new OAuth2Client(CLIENT_ID);
+const client = new OAuth2Client(process.env.CLIENT_ID);
 
 const port = process.env.PORT || 4001;
 
@@ -26,36 +25,36 @@ let timer: any;
 const verify = async (token: string) => {
   const ticket = await client.verifyIdToken({
     idToken: token,
-    audience: CLIENT_ID,
+    audience: process.env.CLIENT_ID,
   });
   return ticket.getPayload();
 };
 
-io.on("connection", (socket) => {
-  app.post("/streamData", (request, response) => {
-    streamData = request.body;
-    verify(streamData.loginDetails.id_token)
-      .then((data) => {
-        /* login data in data var. n */
-        getLiveChatId(streamData.url, (liveChatId: string) => {
-          if (liveChatId) {
-            requestChatMessages("", liveChatId);
-          }
-        });
-        response.send({
-          error: false,
-          message: "success",
-        });
-      })
-      .catch((error) => {
-        console.log("login error", error);
-        response.status(401).send({
-          error: true,
-          message: "login token not valid",
-        });
+app.post("/streamData", (request, response) => {
+  streamData = request.body;
+  verify(streamData.loginDetails.id_token)
+    .then((data) => {
+      /* login data in data var. n */
+      getLiveChatId(streamData.url, (liveChatId: string) => {
+        if (liveChatId) {
+          requestChatMessages("", liveChatId);
+        }
       });
-  });
+      response.send({
+        error: false,
+        message: "success",
+      });
+    })
+    .catch((error) => {
+      console.log("login error", error);
+      response.status(401).send({
+        error: true,
+        message: "login token not valid",
+      });
+    });
+});
 
+io.on("connection", (socket) => {
   socket.on("closeConnection", () => {
     console.log("Close connection");
     socket.disconnect();
@@ -68,7 +67,7 @@ const requestChatMessages = (nextPageToken: any, liveChatId: string) => {
   const requestProperties = {
     liveChatId: liveChatId,
     part: "snippet,id,authorDetails",
-    key: API_KEY,
+    key: process.env.API_KEY,
     maxResults: 100,
     pageToken: nextPageToken,
   };
@@ -108,7 +107,7 @@ function keywordInString(string: string, keywords: any) {
 }
 
 const getLiveChatId = (videoId: any, callback: any) => {
-  const videoURL = `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&key=${API_KEY}&part=liveStreamingDetails,snippet`;
+  const videoURL = `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&key=${process.env.API_KEY}&part=liveStreamingDetails,snippet`;
   request(videoURL, (error, request, body) => {
     var bodyObj = JSON.parse(body);
     callback(bodyObj.items[0].liveStreamingDetails.activeLiveChatId);
