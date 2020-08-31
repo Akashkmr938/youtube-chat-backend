@@ -3,6 +3,7 @@ import request = require("request");
 import http = require("http");
 import socketIo = require("socket.io");
 import { OAuth2Client } from "google-auth-library";
+import cors = require("cors");
 
 const apiKey = "AIzaSyCRCsK0UNpcxT2gmp8PHOemV7staZeOx5E";
 const clientID =
@@ -15,6 +16,9 @@ const port = process.env.PORT || 4001;
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
+
+app.use(express.json());
+app.use(cors());
 
 let streamData: any;
 let timer: any;
@@ -29,19 +33,27 @@ async function verify(token: string) {
 }
 
 io.on("connection", (socket) => {
-  socket.on("streamDetails", (streamInputData: any) => {
-    streamData = streamInputData;
-    verify(streamInputData.loginDetails.id_token)
+  app.post("/streamData", (request, response) => {
+    streamData = request.body;
+    verify(streamData.loginDetails.id_token)
       .then((data) => {
         /* login data in data var. n */
-        getLiveChatId(streamInputData.url, (liveChatId: string) => {
+        getLiveChatId(streamData.url, (liveChatId: string) => {
           if (liveChatId) {
             requestChatMessages("", liveChatId);
           }
         });
+        response.send({
+          error: false,
+          message: "success",
+        });
       })
       .catch((error) => {
         console.log("login error", error);
+        response.send({
+          error: true,
+          message: "login token not valid",
+        });
       });
   });
 
