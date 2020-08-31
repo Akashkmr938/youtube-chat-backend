@@ -12,6 +12,8 @@
   "author": "Akash Kumar",
   "license": "ISC",
   "dependencies": {
+    "@types/cors": "^2.8.7",
+    "cors": "^2.8.5",
     "express": "^4.17.1",
     "google-auth-library": "^6.0.6",
     "googleapis": "^59.0.0",

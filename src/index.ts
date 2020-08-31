@@ -4,7 +4,7 @@ import http = require("http");
 import socketIo = require("socket.io");
 import { OAuth2Client } from "google-auth-library";
 
-const apiKey = "AIzaSyDiO0j4AKF8__Uf5qqbvhjimr4kC8Q9t8c";
+const apiKey = "AIzaSyC1U07d0VAr7Lwhm4wqpMr6V-udN-pl3yM";
 const clientID =
   "245046245085-aqtiof6fnq42g2u1uooag9q9j028h9i4.apps.googleusercontent.com";
 
@@ -27,6 +27,8 @@ async function verify(token: string) {
 
 io.on("connection", (socket) => {
   socket.on("streamDetails", (streamInputData: any) => {
+    console.log("here");
+
     verify(streamInputData.loginDetails.id_token)
       .then((data) => {
         /* login data in data var. n */
@@ -39,6 +41,10 @@ io.on("connection", (socket) => {
       .catch((error) => {
         console.log("login error", error);
       });
+  });
+
+  socket.on("disconnect", () => {
+    socket.disconnect();
   });
 });
 
@@ -78,6 +84,7 @@ const getLiveChatId = (videoId: any, callback: any) => {
   const videoURL = `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&key=${apiKey}&part=liveStreamingDetails,snippet`;
   request(videoURL, (error, request, body) => {
     var bodyObj = JSON.parse(body);
+
     callback(bodyObj.items[0].liveStreamingDetails.activeLiveChatId);
   });
 };
