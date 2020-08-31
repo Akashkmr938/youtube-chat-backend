@@ -4,7 +4,7 @@ import http = require("http");
 import socketIo = require("socket.io");
 import { OAuth2Client } from "google-auth-library";
 
-const apiKey = "AIzaSyC1U07d0VAr7Lwhm4wqpMr6V-udN-pl3yM";
+const apiKey = "AIzaSyCRCsK0UNpcxT2gmp8PHOemV7staZeOx5E";
 const clientID =
   "245046245085-aqtiof6fnq42g2u1uooag9q9j028h9i4.apps.googleusercontent.com";
 
@@ -17,6 +17,7 @@ const server = http.createServer(app);
 const io = socketIo(server);
 
 let streamData: any;
+let timer: any;
 
 async function verify(token: string) {
   const ticket = await client.verifyIdToken({
@@ -35,7 +36,7 @@ io.on("connection", (socket) => {
         /* login data in data var. n */
         getLiveChatId(streamInputData.url, (liveChatId: string) => {
           if (liveChatId) {
-            requestChatMessages("", liveChatId, io);
+            requestChatMessages("", liveChatId);
           }
         });
       })
@@ -44,16 +45,14 @@ io.on("connection", (socket) => {
       });
   });
 
-  socket.on("disconnect", () => {
+  socket.on("closeConnection", () => {
+    console.log("Close connection");
     socket.disconnect();
+    clearInterval(timer);
   });
 });
 
-const requestChatMessages = (
-  nextPageToken: any,
-  liveChatId: string,
-  io: any
-) => {
+const requestChatMessages = (nextPageToken: any, liveChatId: string) => {
   const chatURL = "https://content.googleapis.com/youtube/v3/liveChat/messages";
   const requestProperties = {
     liveChatId: liveChatId,
@@ -81,8 +80,8 @@ const requestChatMessages = (
       });
     }
 
-    setTimeout(() => {
-      requestChatMessages(bodyObj.nextPageToken, liveChatId, io);
+    timer = setTimeout(() => {
+      requestChatMessages(bodyObj.nextPageToken, liveChatId);
     }, bodyObj.pollingIntervalMillis);
   });
 };
@@ -101,7 +100,6 @@ const getLiveChatId = (videoId: any, callback: any) => {
   const videoURL = `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&key=${apiKey}&part=liveStreamingDetails,snippet`;
   request(videoURL, (error, request, body) => {
     var bodyObj = JSON.parse(body);
-
     callback(bodyObj.items[0].liveStreamingDetails.activeLiveChatId);
   });
 };
