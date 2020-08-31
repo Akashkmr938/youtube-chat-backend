@@ -1,15 +1,15 @@
-import express = require("express");
-import request = require("request");
-import http = require("http");
-import socketIo = require("socket.io");
+import express from "express";
+import request from "request";
+import http from "http";
+import socketIo from "socket.io";
 import { OAuth2Client } from "google-auth-library";
-import cors = require("cors");
+import cors from "cors";
 
-const apiKey = "AIzaSyCRCsK0UNpcxT2gmp8PHOemV7staZeOx5E";
-const clientID =
+const API_KEY = "AIzaSyCRCsK0UNpcxT2gmp8PHOemV7staZeOx5E";
+const CLIENT_ID =
   "245046245085-aqtiof6fnq42g2u1uooag9q9j028h9i4.apps.googleusercontent.com";
 
-const client = new OAuth2Client(clientID);
+const client = new OAuth2Client(CLIENT_ID);
 
 const port = process.env.PORT || 4001;
 
@@ -23,14 +23,13 @@ app.use(cors());
 let streamData: any;
 let timer: any;
 
-async function verify(token: string) {
+const verify = async (token: string) => {
   const ticket = await client.verifyIdToken({
     idToken: token,
-    audience:
-      "245046245085-aqtiof6fnq42g2u1uooag9q9j028h9i4.apps.googleusercontent.com",
+    audience: CLIENT_ID,
   });
   return ticket.getPayload();
-}
+};
 
 io.on("connection", (socket) => {
   app.post("/streamData", (request, response) => {
@@ -50,7 +49,7 @@ io.on("connection", (socket) => {
       })
       .catch((error) => {
         console.log("login error", error);
-        response.send({
+        response.status(401).send({
           error: true,
           message: "login token not valid",
         });
@@ -69,7 +68,7 @@ const requestChatMessages = (nextPageToken: any, liveChatId: string) => {
   const requestProperties = {
     liveChatId: liveChatId,
     part: "snippet,id,authorDetails",
-    key: apiKey,
+    key: API_KEY,
     maxResults: 100,
     pageToken: nextPageToken,
   };
@@ -109,11 +108,13 @@ function keywordInString(string: string, keywords: any) {
 }
 
 const getLiveChatId = (videoId: any, callback: any) => {
-  const videoURL = `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&key=${apiKey}&part=liveStreamingDetails,snippet`;
+  const videoURL = `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&key=${API_KEY}&part=liveStreamingDetails,snippet`;
   request(videoURL, (error, request, body) => {
     var bodyObj = JSON.parse(body);
     callback(bodyObj.items[0].liveStreamingDetails.activeLiveChatId);
   });
 };
 
-server.listen(port, () => {});
+server.listen(port, () => {
+  console.log("listening at port", port);
+});
