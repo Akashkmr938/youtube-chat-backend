@@ -16,6 +16,8 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
+let streamData: any;
+
 async function verify(token: string) {
   const ticket = await client.verifyIdToken({
     idToken: token,
@@ -27,8 +29,7 @@ async function verify(token: string) {
 
 io.on("connection", (socket) => {
   socket.on("streamDetails", (streamInputData: any) => {
-    console.log("here");
-
+    streamData = streamInputData;
     verify(streamInputData.loginDetails.id_token)
       .then((data) => {
         /* login data in data var. n */
@@ -64,14 +65,20 @@ const requestChatMessages = (
 
   request({ url: chatURL, qs: requestProperties }, (error, response, body) => {
     const bodyObj = JSON.parse(body);
-    bodyObj.items.forEach((chat: any) => {
-      console.log(
-        `${chat.authorDetails.displayName} : ${chat.snippet.displayMessage}`
-      );
-    });
 
     if (bodyObj.items.length) {
-      io.emit("chatMessages", bodyObj.items);
+      let chatItems = bodyObj.items;
+      if (streamData.keywords.length) {
+        chatItems = filterChat(chatItems, streamData.keywords);
+      }
+
+      io.emit("chatMessages", chatItems);
+
+      chatItems.forEach((chat: any) => {
+        console.log(
+          `${chat.authorDetails.displayName} : ${chat.snippet.displayMessage}`
+        );
+      });
     }
 
     setTimeout(() => {
@@ -79,6 +86,16 @@ const requestChatMessages = (
     }, bodyObj.pollingIntervalMillis);
   });
 };
+
+const filterChat = (chats: any, keywords: any) => {
+  return chats.filter((item: any) =>
+    keywordInString(item.snippet.displayMessage.toLowerCase(), keywords)
+  );
+};
+
+function keywordInString(string: string, keywords: any) {
+  return string.split(/\b/).some(Array.prototype.includes.bind(keywords));
+}
 
 const getLiveChatId = (videoId: any, callback: any) => {
   const videoURL = `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&key=${apiKey}&part=liveStreamingDetails,snippet`;
