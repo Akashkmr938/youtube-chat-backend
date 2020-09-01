@@ -20,15 +20,16 @@ app.use(cors());
 
 let streamData: any;
 let timer: any;
+let counter = 0;
 
 /**
  * Handling post call for URl and login details
  */
 app.post("/streamData", (request, response) => {
   streamData = request.body;
+  counter = 0;
   verify(streamData.loginDetails.id_token)
     .then((data) => {
-      /* login data in data var. n */
       getLiveChatId(streamData.url, (liveChatId: string) => {
         if (liveChatId) {
           requestChatMessages("", liveChatId);
@@ -66,12 +67,18 @@ const getLiveChatId = (videoId: any, callback: any) => {
   const videoURL = `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&key=${process.env.API_KEY}&part=liveStreamingDetails,snippet`;
   request(videoURL, (error, response, body) => {
     var bodyObj = JSON.parse(body);
-    console.log(bodyObj);
 
     if (!bodyObj.items.length) {
       io.emit("error", "Internal Error Occurred");
-    } else if (!bodyObj.items[0].liveStreamingDetails) {
+      return io.emit("closeSocket");
+    }
+    if (!bodyObj.items[0].liveStreamingDetails) {
       io.emit("error", "Invalid Live Stream URL");
+      return io.emit("closeSocket");
+    }
+    if (!bodyObj.items[0].liveStreamingDetails.activeLiveChatId) {
+      io.emit("error", "Chat not available for this stream");
+      return io.emit("closeSocket");
     } else {
       callback(bodyObj.items[0].liveStreamingDetails.activeLiveChatId);
     }
@@ -88,7 +95,6 @@ io.on("connection", (socket) => {
     clearInterval(timer);
   });
 });
-
 /**
  * Chat request with polling
  */
@@ -102,22 +108,35 @@ const requestChatMessages = (nextPageToken: string, liveChatId: string) => {
     pageToken: nextPageToken,
   };
 
-  request({ url: chatURL, qs: requestProperties }, (body) => {
+  request({ url: chatURL, qs: requestProperties }, (error, request, body) => {
     const bodyObj = JSON.parse(body);
+    let chatItems = [];
+    counter++;
+
+    if (bodyObj.error && bodyObj.error.message) {
+      io.emit("error", bodyObj.error.message);
+      return io.emit("closeSocket");
+    }
 
     if (bodyObj.items.length) {
-      let chatItems = bodyObj.items;
+      chatItems = bodyObj.items;
       if (streamData.keywords.length) {
         chatItems = filterChat(chatItems, streamData.keywords);
       }
 
-      io.emit("chatMessages", chatItems);
+      if (chatItems.length) {
+        io.emit("chatMessages", chatItems);
+      }
 
       chatItems.forEach((chat: any) => {
         console.log(
           `${chat.authorDetails.displayName} : ${chat.snippet.displayMessage}`
         );
       });
+    }
+    if (!chatItems.length && counter === 1) {
+      io.emit("error", "No chats to display");
+      return io.emit("closeSocket");
     }
 
     timer = setTimeout(() => {
