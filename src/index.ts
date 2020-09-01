@@ -169,7 +169,11 @@ const keywordInString = (string: string, keywords: string[]) => {
   return r;
 };
 
+/**
+ * Get call for testing
+ */
 app.get("/", (request, response) => response.send("Server is up and running"));
+
 /**
  * Server running up
  */
