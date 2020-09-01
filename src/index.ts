@@ -162,6 +162,7 @@ const keywordInString = (string: string, keywords: string[]) => {
   return string.split(/\b/).some(Array.prototype.includes.bind(keywords));
 };
 
+app.get("/", (request, response) => response.send("Server is up and running"));
 /**
  * Server running up
  */
