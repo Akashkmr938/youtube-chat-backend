@@ -68,7 +68,7 @@ const getLiveChatId = (videoId: any, callback: any) => {
   request(videoURL, (error, response, body) => {
     var bodyObj = JSON.parse(body);
 
-    if (!bodyObj.items.length) {
+    if (!bodyObj.items || !bodyObj.items.length) {
       io.emit("error", "Internal Error Occurred");
       return io.emit("closeSocket");
     }
