@@ -150,6 +150,9 @@ const requestChatMessages = (nextPageToken: string, liveChatId: string) => {
  */
 const filterChat = (chats: any, keywords: string[]) => {
   keywords = keywords.map((keyword) => keyword.toLowerCase());
+
+  console.log("keywords", keywords);
+
   return chats.filter((item: any) =>
     keywordInString(item.snippet.displayMessage.toLowerCase(), keywords)
   );
@@ -159,7 +162,11 @@ const filterChat = (chats: any, keywords: string[]) => {
  * Method to check if keyword is present in the chat string
  */
 const keywordInString = (string: string, keywords: string[]) => {
-  return string.split(/\b/).some(Array.prototype.includes.bind(keywords));
+  var r = false;
+  string.split(/\b/).some((x) => {
+    return (r = keywords.includes(x) ? true : false);
+  });
+  return r;
 };
 
 app.get("/", (request, response) => response.send("Server is up and running"));
